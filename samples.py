@@ -13,7 +13,22 @@ class OPTChapter(unittest.TestCase):
         logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
         logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
 
+    def showImageAndWaitClose(self, imgName, img):
+        usematplotlib = False
+        if usematplotlib:
+            img2 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            plt.imshow(img2)
+            plt.xticks([]), plt.yticks([])  # 不显示x、y轴坐标
+            plt.show()
+        else:
+            while True:
+              cv2.imshow(imgName, img)
+              if cv2.waitKey(20) & 0xFF == 27: # 等待按键，如果为ESC则跳出循环
+                break
+            cv2.destroyAllWindows() # 销毁窗体
+
 class Chapter4(OPTChapter):
+    ''' 显示图片 '''
     def case4(self):
         img = cv2.imread('images/SGDevX.jpg')
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -22,6 +37,7 @@ class Chapter4(OPTChapter):
         plt.show()
 
 class Chapter5(OPTChapter):
+    ''' 控制摄像头 '''
     def setUp(self):
         OPTChapter.setUp(self)
         self.cap = cv2.VideoCapture(0)
@@ -52,23 +68,10 @@ class Chapter5(OPTChapter):
                     break
 
 class Chapter6(OPTChapter):
+    ''' 基本绘图 '''
     def setUp(self):
         OPTChapter.setUp(self)
         self.img = np.zeros((512, 512, 3), np.uint8)
-
-    def showImageAndWaitClose(self, imgName, img):
-        usematplotlib = False
-        if usematplotlib:
-            img2 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            plt.imshow(img2)
-            plt.xticks([]), plt.yticks([])  # 不显示x、y轴坐标
-            plt.show()
-        else:
-            while True:
-              cv2.imshow(imgName, img)
-              if cv2.waitKey(20) & 0xFF == 27: # 等待按键，如果为ESC则跳出循环
-                break
-            cv2.destroyAllWindows() # 销毁窗体
 
     def case1(self):
         # 画线，参数为：起点、终点坐标、颜色、线宽
@@ -102,7 +105,146 @@ class Chapter6(OPTChapter):
         cv2.putText(self.img, 'OpenCV', (250, 220), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
 
         self.showImageAndWaitClose('image', self.img)
-        
+       
+class Chapter7(OPTChapter):
+    ''' 处理鼠标事件 '''
+    def setUp(self):
+        OPTChapter.setUp(self)
+        self.img = np.zeros((512, 512, 3), np.uint8)
+        self.imgName = 'image'
+        cv2.namedWindow(self.imgName)
+
+    def getEventFlagsName(self, value):
+        valueNameMap = {1:'EVENT_FLAG_LBUTTON', 2:'EVENT_FLAG_RBUTTON', 
+        4:'EVENT_FLAG_MBUTTON', 8:'EVENT_FLAG_CTRLKEY', 
+        16:'EVENT_FLAG_SHIFTKEY', 32:'EVENT_FLAG_ALTKEY'}
+        name = ''
+        for k, v in valueNameMap.items():
+            if value & k != 0:
+                if len(name) == 0:
+                    name = v
+                else:
+                    name += '|%s' % v
+
+        return name
+
+    def getEventActionName(self, action):
+        actionNameMap = ['EVENT_MOUSEMOVE', 'EVENT_LBUTTONDOWN', 
+        'EVENT_RBUTTONDOWN', 'EVENT_MBUTTONDOWN', 'EVENT_LBUTTONUP', 
+        'EVENT_RBUTTONUP', 'EVENT_MBUTTONUP', 'EVENT_LBUTTONDBLCLK', 
+        'EVENT_RBUTTONDBLCLK', 'EVENT_MBUTTONDBLCLK', 'EVENT_MOUSEWHEEL', 
+        'EVENT_MOUSEHWHEEL', ]
+        return actionNameMap[action]
+
+    def case1(self):
+        ''' 打印和鼠标相关的所有事件 '''
+        events = [i for i in dir(cv2) if 'EVENT' in i]
+        for event in events:
+            logging.info('%2d %s' % (getattr(cv2, event), event))
+
+    def case2(self):
+        ''' 演示鼠标回调各参数的含义 '''
+        def mouseCallback(event, x, y, flags, param):
+            ''' param参数个数可以有多个 '''
+            logging.info('(%3d, %3d), event:%-24s, flags:%-24s' % (x, y, 
+                self.getEventActionName(event), 
+                self.getEventFlagsName(flags)))
+            img = param
+            if event == cv2.EVENT_LBUTTONDOWN:
+                cv2.circle(img, (x, y), 1, (255, 0, 0), -1)
+
+        cv2.setMouseCallback(self.imgName, mouseCallback, self.img)
+        self.showImageAndWaitClose(self.imgName, self.img)
+
+class Chapter8(OPTChapter):
+    def case1(self):
+        def trackbarCallback(trackbarValue):
+            logging.debug(trackbarValue)
+
+        img = np.zeros((300, 512, 3), np.uint8)
+        cv2.namedWindow('image')
+
+        cv2.createTrackbar('R', 'image', 0, 255, trackbarCallback)
+        cv2.createTrackbar('G', 'image', 0, 255, trackbarCallback)
+        cv2.createTrackbar('B', 'image', 0, 255, trackbarCallback)
+
+        switch = '0:OFF\n1:ON'
+        cv2.createTrackbar(switch, 'image', 0, 1, trackbarCallback)
+        while True:
+            cv2.imshow('image', img)
+            if cv2.waitKey(1) & 0xFF == 27:
+                break
+
+            r = cv2.getTrackbarPos('R', 'image')
+            g = cv2.getTrackbarPos('G', 'image')
+            b = cv2.getTrackbarPos('B', 'image')
+            s = cv2.getTrackbarPos(switch, 'image')
+
+            if s == 0:
+                img[:] = 0
+            else:
+                img[:] = [b, g, r]
+
+        cv2.destroyAllWindows()
+
+class Chapter9(OPTChapter):
+    def case2(self):
+        img = cv2.imread('images/SGDevX.jpg')
+        if len(img.shape) == 3:
+            logging.info('row:%d, col:%d, channels:%d' % img.shape)
+        elif len(img.shape) == 2:
+            logging.info('row:%d, col:%d' % img.shape)
+
+        self.showImageAndWaitClose('image', img)
+
+    def case3(self):
+        ''' 图像ROI（Region of Interest） '''
+        img = cv2.imread('images/messi5.jpg')
+        ball = img[280:340, 330:390]
+        img[273:333, 100:160] = ball
+        self.showImageAndWaitClose('image', img)
+
+    def case4(self):
+        ''' 图像通道拆分、合并 '''
+        img = cv2.imread('images/messi5.jpg')
+        b = img[:, :, 0]    # 读出所有b通道颜色
+        logging.info(b)
+        img[:, :, 2] = 0    # 将所有r通道颜色置0
+        self.showImageAndWaitClose('image', img)
+
+class Chapter13(OPTChapter):
+    def case1(self):
+        flags = [i for i in dir(cv2) if i.startswith('COLOR_')]
+        outputString = ''
+        idx = 0
+        for flag in flags:
+            outputString += '%3d %-24s ' % (getattr(cv2, flag), flag)
+            idx += 1
+            if idx % 4 == 0:
+                outputString += '\n'
+        logging.info(outputString)
+
+    def case2(self):
+        cap = cv2.VideoCapture(0)
+        while(True):
+            ret, frame = cap.read()
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            
+            lower_blue = np.array([110, 50, 50])
+            upper_blue = np.array([130, 255, 255])
+
+            mask = cv2.inRange(hsv, lower_blue, upper_blue)
+
+            res = cv2.bitwise_and(frame, frame, mask=mask)
+
+            cv2.imshow('frame', frame)
+            cv2.imshow('mask', mask)
+            cv2.imshow('res', res)
+
+            if cv2.waitKey(5) & 0xFF == 27:
+                break
+        cv2.destroyAllWindows()
+
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
