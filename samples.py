@@ -228,14 +228,14 @@ class Chapter13(OPTChapter):
         cap = cv2.VideoCapture(0)
         while(True):
             ret, frame = cap.read()
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            
-            lower_blue = np.array([110, 50, 50])
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)    # 转换到HSV
+
+            lower_blue = np.array([110, 50, 50])            # 设定蓝色阈值
             upper_blue = np.array([130, 255, 255])
 
-            mask = cv2.inRange(hsv, lower_blue, upper_blue)
+            mask = cv2.inRange(hsv, lower_blue, upper_blue) # 根据阈值构建掩模
 
-            res = cv2.bitwise_and(frame, frame, mask=mask)
+            res = cv2.bitwise_and(frame, frame, mask=mask)  # 对原图和掩模图做位运算
 
             cv2.imshow('frame', frame)
             cv2.imshow('mask', mask)
@@ -244,6 +244,56 @@ class Chapter13(OPTChapter):
             if cv2.waitKey(5) & 0xFF == 27:
                 break
         cv2.destroyAllWindows()
+
+class Chapter14(OPTChapter):
+    def case1(self):
+        img = cv2.imread('images/SGDevX.jpg')
+        # 这两种缩放图片的方式效果是一样的：
+        # ①
+        res1 = cv2.resize(img, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_CUBIC)
+        self.showImageAndWaitClose('res1', res1)
+        # ②
+        height, width = int(height * 0.5), int(width * 0.5)
+        res2 = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
+        self.showImageAndWaitClose('res2', res2)
+
+    def case2(self):
+        ''' 平移 '''
+        img = cv2.imread('images/SGDevX.jpg')
+        rows, cols = img.shape[:2]
+        M = np.float32([[1, 0, 100], [0, 1, 50]]) # 变换矩阵tx, ty
+        dst = cv2.warpAffine(img, M, (cols, rows))# 参数3 输出图像的尺寸
+        self.showImageAndWaitClose('image', dst)
+
+    def case3(self):
+        ''' 旋转 '''
+        img = cv2.imread('images/SGDevX.jpg')
+        rows, cols = img.shape[:2]
+        # 参数1 旋转中心，参数2 旋转角度，参数3 旋转后的缩放因子
+        M = cv2.getRotationMatrix2D((cols/2, rows/2), 45, 0.6)
+
+        dst = cv2.warpAffine(img, M, (cols, rows))
+        self.showImageAndWaitClose('image', dst)
+
+    def case4_5(self):
+        ''' 仿射变换是将一张直视的图片沿x（如放倒）或y（如开关门）轴旋转。透视变换是仿射变换的逆过程，把放倒的照片立起来 '''
+        img = cv2.imread('images/SGDevX.jpg')
+        rows, cols = img.shape[:2]
+        # ①仿射变换
+        # 指定3个点，变换前后的坐标
+        pts1 = np.float32([[50, 50], [200, 50], [50, 200]])
+        pts2 = np.float32([[10, 100], [200, 50], [100, 250]])
+        M1 = cv2.getAffineTransform(pts1, pts2)  # 组织变换矩阵
+        dst1 = cv2.warpAffine(img, M1, (cols, rows))
+
+        self.showImageAndWaitClose('image', img)
+        self.showImageAndWaitClose('dst1', dst1)
+        # ②透视变换
+        pts1 = np.float32([[50, 50], [200, 50], [50, 200], [200, 200]])
+        pts2 = np.float32([[10, 100], [200, 50], [100, 250], [290, 200]])
+        M2 = cv2.getPerspectiveTransform(pts2, pts1)
+        dst2 = cv2.warpPerspective(dst1, M2, (cols, rows))
+        self.showImageAndWaitClose('dst2', dst2)
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
