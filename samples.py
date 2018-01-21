@@ -295,6 +295,67 @@ class Chapter14(OPTChapter):
         dst2 = cv2.warpPerspective(dst1, M2, (cols, rows))
         self.showImageAndWaitClose('dst2', dst2)
 
+class Chapter46(OPTChapter):
+    def case1(self):
+        # 生成 25 × 2 的矩阵（坐标），每个元素∈[0, 100)
+        trainData = np.random.randint(0, 100, (25, 2)).astype(np.float32)
+        # 生成 25 × 1 的矩阵（颜色），每个元素∈[0, 2)
+        responses = np.random.randint(0, 2, (25, 1)).astype(np.float32)
+        # 以上两步其实生成了 25 × 3 的矩阵，每一行为(x, y color)
+
+        # responses.ravel() == 0 返回一个Boolean序列
+        # red 为color==0的所有行
+        red = trainData[responses.ravel() == 0]
+
+        # red[:, 0]、red[:, 1] 提取所有行的x列 和 y列
+        # 参数3、参数4、参数5 绘制大小、颜色、形状
+        plt.scatter(red[:, 0], red[:, 1], 10, 'r', '^')
+
+        blue = trainData[responses.ravel() == 1]
+        plt.scatter(blue[:, 0], blue[:, 1], 10, 'b', 's')
+
+        # 随机生成newcomer的x、y坐标
+        newcomer = np.random.randint(0, 100, (5, 2)).astype(np.float32)
+        plt.scatter(newcomer[:, 0], newcomer[:, 1], 20, 'g', 'o')
+
+        knn = cv2.ml.KNearest_create()
+        knn.train(trainData, cv2.ml.ROW_SAMPLE, responses)
+        ret, results, neighbours, dist = knn.findNearest(newcomer, 3)
+
+        logging.info('result:%s' % results) # 预测newcomer的颜色
+        logging.info('neightbours:%s' % neighbours) # 与newcomer邻近的3个点的颜色
+        logging.info('distance:%s' % dist)  # 与newcomer邻近的3个点的距离
+
+        plt.show()
+
+    def case2(self):
+        img = cv2.imread('images/digits.png')
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # 将大图 50行×100列 分成5000张小图
+        cells = [np.hsplit(row, 100) for row in np.vsplit(gray, 50)]
+        # 将cells装到numpy array中，这是一个[50, 100, 20, 20]的数组
+        x = np.array(cells)
+
+        # 分出前50列共2500张图，重新组织成2500张每张图400个像素的训练数据
+        train = x[:, :50].reshape(-1, 400).astype(np.float32)
+        # 重新组织测试数据
+        test = x[:, 50:100].reshape(-1, 400).astype(np.float32)
+
+        # 为训练数据和测试数据创建labels
+        k = np.arange(10)
+        trainLabels = np.repeat(k, 250)[:, np.newaxis]
+        testLabels = trainLabels.copy()
+
+        knn = cv2.ml.KNearest_create()
+        knn.train(train, cv2.ml.ROW_SAMPLE, trainLabels)
+        ret, results, neighbours, dist = knn.findNearest(test, k=5)
+
+        matches = results == testLabels
+        correct = np.count_nonzero(matches)
+        accuracy = correct * 100.0 / results.size
+
+        logging.info(accuracy)
+
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
