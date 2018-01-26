@@ -338,7 +338,7 @@ class Chapter46(OPTChapter):
 
         # 分出前50列共2500张图，重新组织成2500张每张图400个像素的训练数据
         train = x[:, :50].reshape(-1, 400).astype(np.float32)
-        # 重新组织测试数据
+        # 重新组织测试数据，共2500张图
         test = x[:, 50:100].reshape(-1, 400).astype(np.float32)
 
         # 为训练数据和测试数据创建labels
