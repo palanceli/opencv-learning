@@ -328,7 +328,7 @@ class Chapter46(OPTChapter):
 
         plt.show()
 
-    def case2(self):
+    def case2_1(self):
         img = cv2.imread('images/digits.png')
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # 将大图 50行×100列 分成5000张小图
@@ -354,6 +354,22 @@ class Chapter46(OPTChapter):
         correct = np.count_nonzero(matches)
         accuracy = correct * 100.0 / results.size
 
+        logging.info(accuracy)
+
+    def case2_2(self):
+        data = np.loadtxt('images/letter-recognition.data', dtype='float32', 
+            delimiter = ',', converters= {0: lambda ch: ord(ch)-ord('A')})
+        train, test = np.vsplit(data, 2)
+
+        responses, trainData = np.hsplit(train, [1])
+        labels, testData = np.hsplit(test, [1])
+
+        knn = cv2.ml.KNearest_create()
+        knn.train(trainData, cv2.ml.ROW_SAMPLE, responses)
+        ret, result, neighbours, dist = knn.findNearest(testData, k=5)
+
+        correct = np.count_nonzero(result == labels)
+        accuracy = correct * 100.0 / 10000
         logging.info(accuracy)
 
 if __name__ == '__main__':
